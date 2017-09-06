@@ -1,7 +1,11 @@
 import React, { Component } from 'react';
 import './App.css';
 
-
+const inputField = props => {
+  return (
+    <input placeholder={props.placeholder} className={props.className} id={props.id} key={props.id} />
+  )
+}
 const filterCriteria = {
   string: ['Is', 'Is not'],
   numbers: ['Is greater than', 'Is less than'],
@@ -20,7 +24,6 @@ const filterCriteria = {
     '200 mi.',
   ],
 }
-
 const subSets = {
   positions: [
     'Food Service, Hospitality & Hotel (any)',
@@ -65,7 +68,8 @@ const subSets = {
     'Lead Generation',
     'Other Customer Service & Call Center',
   ],
-  workQualification: ['W2',
+  workQualification: [
+    'W2',
     '1099',
     'EOR-TargetCW',
     'EOR-EPS',
@@ -81,35 +85,17 @@ const subSets = {
   ],
   age: ['18 or older', '21 or older'],
 }
-
-//const filters = [
-//  {
-//    value: 'select',
-//    description: 'Select Option',
-//  },
-//  {
-//    value: 'experience',
-//    description: 'Experience',
-//    criteria: filterCriteria['strings'],
-//    subset: subSets['expRange'],
-//  },{
-//    value: 'workqualification',
-//    description: 'Work Qualification Type',
-//    criteria: filterCriteria['strings'],
-//    subset: subSets['workQualification'],
-//  },{
-//    value: 'city',
-//    description: 'City',
-//    criteria: filterCriteria['strings'],
-//  },
-//]
-
 const filters = [
   {value: 'select', description: 'Select Option'},
-  {value: 'city', description: 'City',  subItems:[{criteria: filterCriteria['string']}]},
-  {value: 'age', description: 'Age',  subItems:[{criteria: filterCriteria['string'], subset: subSets['age']}]},
-  {value: 'zipRadius', description: 'Zip Code Radius',  subItems:[{criteria: filterCriteria['zipRadius']}]},
-  {value: 'experience',description: 'Experience',subItems:[{
+  {value: 'city', description: 'City', subItems:[
+      {
+        criteria: filterCriteria['string'],
+        fields:[inputField({placeholder:'city', id:'cityInput'})]
+      }
+    ]},
+  {value: 'age', description: 'Age', subItems:[{criteria: filterCriteria['string'], subset: subSets['age']}]},
+  {value: 'zipRadius', description: 'Zip Code Radius', subItems:[{criteria: filterCriteria['zipRadius'], fields:[inputField({placeholder:'zipCode', id:'zipcodeInput'})]}]},
+  {value: 'experience',description: 'Experience', subItems:[{
       criteria: filterCriteria['string'],
       subset: subSets['positions'],
     },{
@@ -117,62 +103,97 @@ const filters = [
       subset: subSets['expRange'],
     }]}
 ]
+const DropDown = props => {
+  const {
+    id,
+    style,
+    options,
+    onChange
+  } = props
+  return (
+    <select onChange={(e) => onChange(e)} id={id} style={style}>
+      { options.map((option, i) => {
+        return <option key={i} value={option}>{option}</option>
+      })
+      }
+    </select>
+  )
+}
+const advancedFilterSubItems = (item, i) => {
+   return (
+       <div key={i} style={{'display':'inline-block'}}>
+         { item.criteria && <DropDown id={`criteria${i}`} style={{'margin':'0 10px'}} options={item.criteria} /> }
+         { item.subset && <DropDown id={`subItem${i}`} options={item.subset} /> }
+         { item.fields && item.fields.map(field => { return field }) }
+       </div>
+   )
+}
 
-
-class App extends Component {
-  constructor (props) {
+class AdvancedFilters extends Component {
+  constructor(props){
     super(props)
     this.state = {
-      showCriteria: false,
-      showSubset: false,
-      selectedFilter: {}
+      selectedFilters: [filters[0]],
     }
   }
 
   onChangeFilter (e) {
-    const {value} = e.target
-    const selected = filters.find(f => f.value === value)
-    console.log(selected)
-    console.log(selected.subItems)
-    this.setState({showSubItems: true, selectedFilter: selected})
+    const {value, id} = e.target
+    const {selectedFilters} = this.state
+    const selected = Object.assign({}, filters.find(f => f.value === value))
+    this.setState({
+      selectedFilters: [...selectedFilters.slice(0, id),
+      selected,
+      ...selectedFilters.slice(parseInt(id)+1),]
+    })
   }
 
-  render () {
-    const {showSubItems, selectedFilter} = this.state
+  handleAddFilter() {
+    const selectOptionFilter = Object.assign({}, filters.find(f => f.value === 'select'))
+    this.setState({selectedFilters: [...this.state.selectedFilters, selectOptionFilter]})
+  }
+
+  render() {
+    const {selectedFilters} = this.state
     return (
-      <div className="App">
-        <select onChange={e => this.onChangeFilter(e)}>
-          {
-            filters.map((f, i) => {
-              return <option key={i} value={f.value}>{f.description}</option>
-            })
-          }
-        </select>
+      <div>
         {
-          (showSubItems && selectedFilter.subItems) &&
-          selectedFilter.subItems.map((item, i) => {
+          selectedFilters.map((item, i) => {
             return (
-              <div>
-                <select key={i}>
-                  {
-                    item.criteria.map((criteria, i) => {
-                      return <option key={i} value={criteria}>{criteria}</option>
-                    })
-                  }
+              <div key={`div${i}`} style={{'margin':'20px 0'}}>
+                <select id={i} onChange={e => this.onChangeFilter(e)}>
+                {
+                  filters.map((f, i) => {
+                    return <option key={i} value={f.value}>{f.description}</option>
+                  })
+                }
                 </select>
-                {selectedFilter.subItems[0].subset &&
-                <select key={`subItem${i}`}>
-                  {
-                    item.subset.map((subset, i) => {
-                      return <option key={i} value={subset}>{subset}</option>
-                    })
-                  }
-                </select>
+                { item.subItems &&
+                  item.subItems.map((subItem, i) => {
+                    return advancedFilterSubItems(subItem, i)
+                  })
                 }
               </div>
             )
           })
         }
+        <div style={{'margin':'20px 0'}}>
+          <button onClick={() => this.handleAddFilter()}>+ Add filter</button>
+        </div>
+        <div style={{'display':'block'}}>
+          <button>Search</button>
+        </div>
+      </div>
+    )
+  }
+}
+
+
+class App extends Component {
+  render () {
+    return (
+      <div className="App">
+        <AdvancedFilters />
       </div>
     )
   }
