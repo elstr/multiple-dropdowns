@@ -1,11 +1,5 @@
 import React, { Component } from 'react';
 import './App.css';
-
-const inputField = props => {
-  return (
-    <input placeholder={props.placeholder} className={props.className} id={props.id} key={props.id} />
-  )
-}
 const filterCriteria = {
   string: ['Is', 'Is not'],
   numbers: ['Is greater than', 'Is less than'],
@@ -85,48 +79,59 @@ const subSets = {
   ],
   age: ['18 or older', '21 or older'],
 }
+
+/* City filter should also render a dropdown with criterias and an input field
+City / IS-ISNot / input
+City / subItems = [{ criteria (IS-ISNot) , fields (input) , values (selected criteria / input value) }]
+City / subItems = [{ filterCriteria['string'] , [{type:'input', placeholder:'city', id:'cityInput'}], {} }}] */
 const filters = [
   {value: 'select', description: 'Select Option'},
   {value: 'city', description: 'City', subItems:[
-      {
-        criteria: filterCriteria['string'],
-        fields:[inputField({placeholder:'city', id:'cityInput'})]
-      }
-    ]},
-  {value: 'age', description: 'Age', subItems:[{criteria: filterCriteria['string'], subset: subSets['age']}]},
-  {value: 'zipRadius', description: 'Zip Code Radius', subItems:[{criteria: filterCriteria['zipRadius'], fields:[inputField({placeholder:'zipCode', id:'zipcodeInput'})]}]},
-  {value: 'experience',description: 'Experience', subItems:[{
+    {
       criteria: filterCriteria['string'],
-      subset: subSets['positions'],
-    },{
-      criteria: filterCriteria['numbers'],
-      subset: subSets['expRange'],
-    }]}
+      fields:[{type:'input', placeholder:'city', id:'cityInput'}],
+      values: {selectedCriteria: filterCriteria['string'][0], fieldValue:''},
+    }
+  ]},
+  {value: 'age', description: 'Age', subItems:[
+    {
+      criteria: filterCriteria['string'],
+      subset: subSets['age'],
+      values: {selectedCriteria: filterCriteria['string'][0], selectedSubset: subSets['age'][0]},
+    }
+  ]},
+  {value: 'zipRadius', description: 'Zip Code Radius', subItems:[
+    {
+      criteria: filterCriteria['zipRadius'],
+      fields:[({type:'input', placeholder:'zipCode', id:'zipcodeInput'})],
+      values: {selectedCriteria: filterCriteria['string'][0], fieldValue:''},
+    }
+    ]},
+  {value: 'experience',description: 'Experience', subItems:[{
+    criteria: filterCriteria['string'],
+    subset: subSets['positions'],
+    values: {selectedCriteria: filterCriteria['string'][0], selectedSubset: subSets['positions'][0]},
+  },{
+    criteria: filterCriteria['numbers'],
+    subset: subSets['expRange'],
+    values: {selectedCriteria: filterCriteria['numbers'][0], selectedSubset: subSets['expRange'][0]},
+  }]}
 ]
 const DropDown = props => {
   const {
     id,
     style,
     options,
-    onChange
+    onChange,
   } = props
   return (
-    <select onChange={(e) => onChange(e)} id={id} style={style}>
+    <select onChange={e => onChange(e)} id={id} style={style}>
       { options.map((option, i) => {
         return <option key={i} value={option}>{option}</option>
       })
       }
     </select>
   )
-}
-const advancedFilterSubItems = (item, i) => {
-   return (
-       <div key={i} style={{'display':'inline-block'}}>
-         { item.criteria && <DropDown id={`criteria${i}`} style={{'margin':'0 10px'}} options={item.criteria} /> }
-         { item.subset && <DropDown id={`subItem${i}`} options={item.subset} /> }
-         { item.fields && item.fields.map(field => { return field }) }
-       </div>
-   )
 }
 
 class AdvancedFilters extends Component {
@@ -143,8 +148,8 @@ class AdvancedFilters extends Component {
     const selected = Object.assign({}, filters.find(f => f.value === value))
     this.setState({
       selectedFilters: [...selectedFilters.slice(0, id),
-      selected,
-      ...selectedFilters.slice(parseInt(id)+1),]
+        selected,
+        ...selectedFilters.slice(parseInt(id, 0)+1),]
     })
   }
 
@@ -153,24 +158,58 @@ class AdvancedFilters extends Component {
     this.setState({selectedFilters: [...this.state.selectedFilters, selectOptionFilter]})
   }
 
+  handleInputChange = (e, subItem) => {
+    const {value} = e.target
+    subItem.values.fieldValue = value
+  }
+  // falta modificar el state
+  handleCriteriaChange = (e, subItem) => {
+    const {options} = e.target
+    const {value} = options[options.selectedIndex]
+    subItem.values.selectedCriteria = value
+    console.log(subItem)
+  }
+  // falta modificar el state
+  handleSubsetChange = (e, subItem) => {
+    const {options} = e.target
+    const {value} = options[options.selectedIndex]
+    subItem.values.selectedSubset = value
+    console.log(subItem)
+  }
+
   render() {
     const {selectedFilters} = this.state
     return (
       <div>
         {
-          selectedFilters.map((item, i) => {
+          selectedFilters.map((filter, i) => {
             return (
-              <div key={`div${i}`} style={{'margin':'20px 0'}}>
+              <div key={i} style={{'margin':'20px 0'}}>
                 <select id={i} onChange={e => this.onChangeFilter(e)}>
-                {
-                  filters.map((f, i) => {
-                    return <option key={i} value={f.value}>{f.description}</option>
-                  })
-                }
+                  {
+                    filters.map((f, i) => {
+                      return <option key={i} value={f.value}>{f.description}</option>
+                    })
+                  }
                 </select>
-                { item.subItems &&
-                  item.subItems.map((subItem, i) => {
-                    return advancedFilterSubItems(subItem, i)
+                { filter.subItems &&
+                  filter.subItems.map((subItem, i) => {
+                    return (
+                      <div key={i} style={{'display':'inline-block'}}>
+                        { subItem.criteria && <DropDown onChange={e => this.handleCriteriaChange(e, subItem)} id={`criteria${i}`} style={{'margin':'0 10px'}} options={subItem.criteria} /> }
+                        { subItem.subset && <DropDown onChange={e => this.handleSubsetChange(e, subItem)} id={`subItem${i}`} options={subItem.subset} /> }
+                        { subItem.fields && subItem.fields.map(field => {
+                          switch(field.type) {
+                            case 'input':
+                              return <input onChange={e => this.handleInputChange(e, subItem)} placeholder={field.placeholder} className={field.className} id={field.id} key={field.id} />
+                              break;
+                            case 'calendar':
+                              break;
+                            default:
+                          }
+                        }) }
+                      </div>
+                    )
                   })
                 }
               </div>
@@ -198,4 +237,4 @@ class App extends Component {
     )
   }
 }
-export default App;
+export default App
