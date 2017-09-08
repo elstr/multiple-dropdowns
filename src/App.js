@@ -138,6 +138,7 @@ class AdvancedFilters extends Component {
   constructor(props){
     super(props)
     this.state = {
+      filters: [...filters],
       selectedFilters: [filters[0]],
     }
   }
@@ -158,34 +159,59 @@ class AdvancedFilters extends Component {
     this.setState({selectedFilters: [...this.state.selectedFilters, selectOptionFilter]})
   }
 
-  handleInputChange = (e, subItem) => {
+  handleInputChange = (e, filterIndex, subItemIndex) => {
     const {value} = e.target
-    subItem.values.fieldValue = value
+    const {selectedFilters} = this.state
+
+    let filter = Object.assign({}, selectedFilters[filterIndex])
+    filter.subItems[subItemIndex].values.fieldValue = value
+
+    this.setState({
+      selectedFilters: [...selectedFilters.slice(0, filterIndex),
+        filter,
+        ...selectedFilters.slice(parseInt(filterIndex, 0)+1),]
+    })
   }
-  // falta modificar el state
-  handleCriteriaChange = (e, subItem) => {
+
+  handleCriteriaChange = (e, filterIndex, subItemIndex) => {
     const {options} = e.target
     const {value} = options[options.selectedIndex]
-    subItem.values.selectedCriteria = value
-    console.log(subItem)
+    const {selectedFilters} = this.state
+
+    let filter = Object.assign({}, selectedFilters[filterIndex])
+    filter.subItems[subItemIndex].values.selectedCriteria = value
+
+    this.setState({
+      selectedFilters: [...selectedFilters.slice(0, filterIndex),
+        filter,
+        ...selectedFilters.slice(parseInt(filterIndex, 0)+1),]
+    })
   }
-  // falta modificar el state
-  handleSubsetChange = (e, subItem) => {
+
+  handleSubsetChange = (e, filterIndex, subItemIndex) => {
     const {options} = e.target
     const {value} = options[options.selectedIndex]
-    subItem.values.selectedSubset = value
-    console.log(subItem)
+    const {selectedFilters} = this.state
+
+    let filter = Object.assign({}, selectedFilters[filterIndex])
+    filter.subItems[subItemIndex].values.selectedSubset = value
+
+    this.setState({
+      selectedFilters: [...selectedFilters.slice(0, filterIndex),
+        filter,
+        ...selectedFilters.slice(parseInt(filterIndex, 0)+1),]
+    })
   }
 
   render() {
-    const {selectedFilters} = this.state
+    const {selectedFilters, filters} = this.state
     return (
       <div>
         {
-          selectedFilters.map((filter, i) => {
+          selectedFilters.map((filter, filterIndex) => {
             return (
-              <div key={i} style={{'margin':'20px 0'}}>
-                <select id={i} onChange={e => this.onChangeFilter(e)}>
+              <div key={filterIndex} style={{'margin':'20px 0'}}>
+                <select id={filterIndex } onChange={e => this.onChangeFilter(e)}>
                   {
                     filters.map((f, i) => {
                       return <option key={i} value={f.value}>{f.description}</option>
@@ -193,15 +219,15 @@ class AdvancedFilters extends Component {
                   }
                 </select>
                 { filter.subItems &&
-                  filter.subItems.map((subItem, i) => {
+                  filter.subItems.map((subItem, subItemIndex) => {
                     return (
-                      <div key={i} style={{'display':'inline-block'}}>
-                        { subItem.criteria && <DropDown onChange={e => this.handleCriteriaChange(e, subItem)} id={`criteria${i}`} style={{'margin':'0 10px'}} options={subItem.criteria} /> }
-                        { subItem.subset && <DropDown onChange={e => this.handleSubsetChange(e, subItem)} id={`subItem${i}`} options={subItem.subset} /> }
+                      <div key={subItemIndex} style={{'display':'inline-block'}}>
+                        { subItem.criteria && <DropDown onChange={e => this.handleCriteriaChange(e, filterIndex, subItemIndex)} id={`criteria${subItemIndex}`} style={{'margin':'0 10px'}} options={subItem.criteria} /> }
+                        { subItem.subset && <DropDown onChange={e => this.handleSubsetChange(e, filterIndex, subItemIndex)} id={`subItem${subItemIndex}`} options={subItem.subset} /> }
                         { subItem.fields && subItem.fields.map(field => {
                           switch(field.type) {
                             case 'input':
-                              return <input onChange={e => this.handleInputChange(e, subItem)} placeholder={field.placeholder} className={field.className} id={field.id} key={field.id} />
+                              return <input onChange={e => this.handleInputChange(e, filterIndex, subItemIndex)} placeholder={field.placeholder} className={field.className} id={field.id} key={field.id} />
                               break;
                             case 'calendar':
                               break;
